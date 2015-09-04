@@ -74,6 +74,7 @@ class MRC:
      'creatid',
      'idtype', 'lens', 'nd1', 'nd2', 'vd1', 'vd2',
      'tiltangles0', 'tiltangles1', 'tiltangles2', 'tiltangles3', 'tiltangles4', 'tiltangles5',
+     'xlen',   'ylen',   'zlen', 
      'xorg',   'yorg',   'zorg',
      'rms',
      'nwave', 'wave1', 'wave2', 'wave3', 'wave4', 'wave5',
@@ -383,8 +384,9 @@ class MRC:
         f.write(pack(format, *values))
 
         for lbl in h['labels']:
-            print(lbl.ljust(MRC.LABEL_LEN))
-            f.write(bytes(lbl.ljust(MRC.LABEL_LEN)))
+            if type(lbl) is str:
+                lbl = lbl.encode()
+            f.write(lbl.ljust(MRC.LABEL_LEN))
 
         blank_lbl = ' ' * MRC.LABEL_LEN
 
