@@ -26,7 +26,7 @@ file_last_value = { }
 
 def get_4_ints(a, help_msg):
     from re import search
-    from images import Rectangle
+    from .images import Rectangle
     if a == '.': # auto-calculate
         file_counts[None] = file_counts.get(None, 0) + 1
         return None
@@ -44,14 +44,14 @@ def get_4_ints(a, help_msg):
 
 def get_rect(im, x):
     from re import search
-    from images import Rectangle
+    from .images import Rectangle
     if isinstance(x, Rectangle): return x
     c = current_file_counts.get(x, 0)
     if c == 0 or c == file_counts[x]:
         if x == None:
-            from images import get_foreground_area
+            from .images import get_foreground_area
             r = get_foreground_area(im)
-            print r
+            print(r)
         else:
             if x.closed: r = file_last_value.get(x, None)
             else:
@@ -72,31 +72,31 @@ def get_rect(im, x):
 
 def parse_opt(o,a,help_msg):
     if o == "-f" or o == "--flip":
-        from images import flip_up_down
+        from .images import flip_up_down
         return flip_up_down
     elif o == "-F" or o == "--float":
-        from images import float_image
+        from .images import float_image
         return float_image
     elif o == "-l" or o == "--label":
-        from images import label
+        from .images import label
         return lambda im: label(im)[0]
     elif o == "-r" or o == "--relabel":
-        from images import relabel
+        from .images import relabel
         return lambda im: relabel(im)[0]
     elif o == "-s" or o == "--sigma":
         from math import isnan
         try: sigma = float(a)
         except: help_msg(2, "Sigma must be a floating-point number greater than or equal to 0.0")
         if sigma < 0 or isnan(sigma): help_msg(2, "Sigma must be a floating-point number greater than or equal to 0.0")
-        from images import gauss_blur
+        from .images import gauss_blur
         return lambda im: gauss_blur(im, sigma)
     elif o == "-t" or o == "--thresh":
         if not a.isdigit() and (len(a) <= 1 or a[0] != '-' or not a[1:].isdigit()): help_msg(2, "Threshold must be an integer")
         threshold = int(a)
-        from images import bw
+        from .images import bw
         return lambda im: bw(im, threshold)
     elif o == "-H" or o == "--histeq":
-        from images import histeq
+        from .images import histeq
         if a.isdigit():
             nbins = int(a)
             return lambda im: histeq(im, nbins=nbins)
@@ -109,19 +109,19 @@ def parse_opt(o,a,help_msg):
     elif o == "-p" or o == "--pad":
         padding = get_4_ints(a, help_msg)
         if padding == None: help_msg(2, "'%s' is not valid for padding" % a)
-        from images import pad
+        from .images import pad
         return lambda im: pad(im, *get_rect(im, padding).rect)
     elif o == "-c" or o == "--crop":
         fg = get_4_ints(a, help_msg)
-        from images import crop
+        from .images import crop
         return lambda im: crop(im, get_rect(im, fg))
     elif o == "-m" or o == "--mirror":
         fg = get_4_ints(a, help_msg)
-        from images import fill_background
+        from .images import fill_background
         return lambda im: fill_background(im, get_rect(im, fg), mirror=True)
     elif o == "-0" or o == "--bgzero":
         fg = get_4_ints(a, help_msg)
-        from images import fill_background
+        from .images import fill_background
         return lambda im: fill_background(im, get_rect(im, fg), 0)
     else:
         help_msg(2, "Invalid argument: "+o)

@@ -33,7 +33,7 @@ Breaking changes:
 
 
 from os import name as os_name
-from sys import maxint
+from sys import maxsize
 from struct import pack, unpack
 from time import time
 from io import BufferedIOBase
@@ -81,7 +81,7 @@ default_gzip_oses = {
 default_gzip_os = default_gzip_oses.get(os_name, 255) # default is unknown, including for 'java'
 
 def get_filename(f, default=None):
-    if isinstance(f, basestring):
+    if isinstance(f, str):
         return f
     elif hasattr(f, 'name') and (len(f.name) < 2 or f.name[0] != '<' and f.name[-1] != '>'):
         return f.name
@@ -94,14 +94,14 @@ def gzip_header_str(s):
     return s + '\x00' if s else None
 def write_gzip_header_str(file, s, chk16):
     file.write(s)
-    return crc32(s, chk16) & 0xffffffffL
+    return crc32(s, chk16) & 0xffffffff
 def read_gzip_header_str(read, chk16):
     s = ''
     while True:
         c = read(1)
         if not c or c == '\x00': break
         s += c
-    return s.decode('iso-8859-1'), (crc32(s+'\x00', chk16) & 0xffffffffL)
+    return s.decode('iso-8859-1'), (crc32(s+'\x00', chk16) & 0xffffffff)
 
 
 # GZIP Format {Little-Endian}
@@ -159,7 +159,7 @@ def compress_file(input, output=None, level=9, type=None):
 
     # Copy data
     with GzipFile(output, 'wb', level, type, **opts) as output:
-        owns_handle = isinstance(input, basestring)
+        owns_handle = isinstance(input, str)
         if owns_handle: input = open(input, 'rb')
         try:
             while True:
@@ -185,7 +185,7 @@ def decompress_file(input, output=None, type=None):
             if not output: raise ValueError('Unable to determine output filename')
 
         # Copy data
-        owns_handle = isinstance(output, basestring)
+        owns_handle = isinstance(output, str)
         if owns_handle: output = open(output, 'wb')
         try:
             while True:
@@ -206,7 +206,7 @@ def compress(input, level=9, type=None):
         s = b'\x1F\x8B\x08\x02' + pack('<LB', int(time()), xf) + b'\xFF'
         s += pack('<H', crc32(s) & 0xffff)
         s += zcompress(input, level)
-        s += pack('<LL', crc32(input) & 0xffffffffL, len(input) & 0xffffffffL)
+        s += pack('<LL', crc32(input) & 0xffffffff, len(input) & 0xffffffff)
         return s
     elif type == 'zlib':
         header = 0x7800 + (((level+1)//3) << 6)
@@ -214,7 +214,7 @@ def compress(input, level=9, type=None):
         if mod31 != 0: header += (31 - mod31)
         s += pack('>H', header)
         s += zcompress(input, level)
-        s += pack('<L', adler32(input) & 0xffffffffL)
+        s += pack('<L', adler32(input) & 0xffffffff)
         return s
     elif type == 'deflate':
         return zcompress(input, level)
@@ -238,7 +238,7 @@ def decompress(input, type=None):
         s = zdecompress(input[off:-8], -MAX_WBITS, isize)
         checksum = crc32(s)
         if crc32 != checksum: raise IOError("CRC32 check failed %08x != %08x" % (crc32, checksum))
-        if isize != (len(s) & 0xffffffffL): raise IOError("Incorrect length of data produced")
+        if isize != (len(s) & 0xffffffff): raise IOError("Incorrect length of data produced")
         return s
     elif type == 'zlib':
         header = unpack('>H', input[:2])[0]
@@ -258,7 +258,7 @@ def decompress(input, type=None):
         raise ValueError('Compression type must be one of deflate, zlib, gzip, or None')
 
 def guessfiletype(f):
-    if isinstance(f, basestring):
+    if isinstance(f, str):
         with open(f, 'rb') as f: return guesstype(f.read(3))
     else: return guesstype(f.read(3))
 
@@ -314,7 +314,7 @@ class GzipFile(BufferedIOBase):
         """
 
         # Check mode
-        if not mode: mode = output.mode if not isinstance(output, basestring) and hasattr(output, 'mode') else 'rb'
+        if not mode: mode = output.mode if not isinstance(output, str) and hasattr(output, 'mode') else 'rb'
         mode = str(mode).translate(None, 'Ut+') # remove unsupported mode characters
         if mode[0] == 'r': mode = 'rb'
         elif mode[0] == 'w': mode = 'wb'
@@ -332,7 +332,7 @@ class GzipFile(BufferedIOBase):
         # Check kwargs
         if kwargs and (type != 'gzip' or mode[0] == 'r'): raise ValueError('Extra keyword arguments can only be provided when writing gzip data')
         if type == 'gzip' and mode[0] != 'r':
-            if len(kwargs.viewkeys() - {'text', 'os', 'comment', 'filename', 'mtime', 'extras'}): raise ValueError('Gzip settings must only include text, comment, filename, mtime, and extras')
+            if len(kwargs.keys() - {'text', 'os', 'comment', 'filename', 'mtime', 'extras'}): raise ValueError('Gzip settings must only include text, comment, filename, mtime, and extras')
             is_text = 'text' in kwargs and kwargs['text']
             os = int(kwargs.get('os', default_gzip_os))
             if os > 255 or os < 0: raise ValueError('Gzip OS is an invalid value')
@@ -349,7 +349,7 @@ class GzipFile(BufferedIOBase):
                 }
 
         # Setup properties
-        if isinstance(output, basestring):
+        if isinstance(output, str):
             self.base = open(output, mode)
             self.owns_handle = True
         else:
@@ -389,7 +389,7 @@ class GzipFile(BufferedIOBase):
         if self._writing:
             self.base.write(self.compressor.flush(Z_FINISH))
             del self.compressor
-            if self.type == 'gzip':   self.base.write(pack('<LL', self.checksum, self.size & 0xffffffffL))
+            if self.type == 'gzip':   self.base.write(pack('<LL', self.checksum, self.size & 0xffffffff))
             elif self.type == 'zlib': self.base.write(pack('>L', self.checksum))
             del self._calc_checksum
             self.base.flush()
@@ -429,18 +429,18 @@ class GzipFile(BufferedIOBase):
             if offset < self.offset: raise IOError('Negative seek in write mode')
             count = offset - self.offset
             if count > 1024: zeros = 1024 * b'\0'
-            for i in xrange(count // 1024): self.write(zeros)
+            for i in range(count // 1024): self.write(zeros)
             self.write((count % 1024) * b'\0')
         else:
             if offset < self.offset: self.rewind() # for negative seek, rewind and do positive seek
             count = offset - self.offset
-            for i in xrange(count // 1024): self.read(1024)
+            for i in range(count // 1024): self.read(1024)
             self.read(count % 1024)
         return self.offset
 
     # Writing
     def _init_writing(self, level):
-        self.checksum = self._calc_checksum("") & 0xffffffffL
+        self.checksum = self._calc_checksum("") & 0xffffffff
         self.size = 0
         windowsize = MAX_WBITS
         if self.type == 'gzip':
@@ -452,7 +452,7 @@ class GzipFile(BufferedIOBase):
             xf = 2 if level >= 7 else (4 if level <= 2 else 0)
             s = b'\x1F\x8B\x08' + pack('<BLBB', flags, self.gzip_options['mtime'], xf, self.gzip_options['os'])
             self.base.write(s)
-            chk16 = crc32(s) & 0xffffffffL
+            chk16 = crc32(s) & 0xffffffff
             if self.gzip_options['extras']:
                 extras = ''
                 for id, data in self.gzip_options['extras']:
@@ -478,7 +478,7 @@ class GzipFile(BufferedIOBase):
         if isinstance(data, memoryview): data = data.tobytes() # Convert data type if called by io.BufferedWriter
         if len(data) > 0:
             self.size += len(data)
-            self.checksum = self._calc_checksum(data, self.checksum) & 0xffffffffL
+            self.checksum = self._calc_checksum(data, self.checksum) & 0xffffffff
             self.base.write(self.compressor.compress(data))
             self.offset += len(data)
         return len(data)
@@ -528,7 +528,7 @@ class GzipFile(BufferedIOBase):
         elif len(str) == n: return str
         return str + self._read_base(n - len(str))
     def _read_header(self):
-        self.checksum = self._calc_checksum("") & 0xffffffffL
+        self.checksum = self._calc_checksum("") & 0xffffffff
         self.size = 0
         windowsize = MAX_WBITS
         if self.type == 'gzip':
@@ -545,12 +545,12 @@ class GzipFile(BufferedIOBase):
             self.gzip_options['text'] = bool(flags & FTEXT)
             self.gzip_options['os'] = os
             self.gzip_options['mtime'] = mtime
-            chk16 = crc32(header) & 0xffffffffL
+            chk16 = crc32(header) & 0xffffffff
             if flags & FEXTRA:
                 # Read the extra field
                 xlen = self._read_base(2)
                 extras = self._read_base(unpack('<H', xlen)[0])
-                chk16 = crc32(extras, crc32(xlen, chk16)) & 0xffffffffL
+                chk16 = crc32(extras, crc32(xlen, chk16)) & 0xffffffff
                 ext = []
                 while len(extras) >= 4:
                     l = unpack('<H', extras[2:4])[0]
@@ -583,7 +583,7 @@ class GzipFile(BufferedIOBase):
                 crc32, isize = unpack('<II', footer)
                 if crc32 != self.checksum:
                     raise IOError("CRC32 check failed %08x != %08x" % (crc32, self.checksum))
-                elif isize != (self.size & 0xffffffffL):
+                elif isize != (self.size & 0xffffffff):
                     raise IOError("Incorrect length of data produced")
             elif self.type == 'zlib':
                 footer = self._read_more(4, footer)
@@ -609,7 +609,7 @@ class GzipFile(BufferedIOBase):
         if len(self.decompressor.unused_data) != 0:
             self._read_footer(self.decompressor.unused_data)
     def _add_read_data(self, data):
-        self.checksum = self._calc_checksum(data, self.checksum) & 0xffffffffL
+        self.checksum = self._calc_checksum(data, self.checksum) & 0xffffffff
         offset = self.offset - self.extrastart
         self.extrabuf = self.extrabuf[offset:] + data
         self.extrasize += len(data)

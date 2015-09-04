@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from utils import check_reqs
+from .utils import check_reqs
 check_reqs()
 
 """
@@ -21,11 +21,11 @@ def mrc2stack(mrc, out_dir, indxs = None, basename = "%04d.png", imfilter = lamb
     imfilter  -- a function/callable that takes and returns an image
     """
     from os.path import join
-    from mrc import MRC
-    from images import imsave
-    from utils import make_dir
+    from .mrc import MRC
+    from .images import imsave
+    from .utils import make_dir
 
-    if isinstance(mrc, basestring): mrc = MRC(mrc)
+    if isinstance(mrc, str): mrc = MRC(mrc)
     if not make_dir(out_dir): raise IOError("Unable to create output directory")
     if indxs == None:
         for i, sec in enumerate(mrc): imsave(join(out_dir, basename % i), imfilter(sec))
@@ -36,34 +36,34 @@ def help_msg(err = 0, msg = None):
     from os.path import basename
     from sys import stderr, argv, exit
     from textwrap import fill, TextWrapper
-    from utils import get_terminal_width
-    import imfilter_util
+    from .utils import get_terminal_width
+    from . import imfilter_util
     w = max(get_terminal_width(), 20)
     tw = TextWrapper(width = w, subsequent_indent = ' '*18)
-    if msg != None: print >> stderr, fill(msg, w)
-    print "Usage:"
-    print tw.fill("  %s [args] input.mrc output_directory" % basename(argv[0]))
-    print ""
-    print "Supports numerous file formats based on extension. Not all types can be saved to with all options."
-    print ""
-    print "Optional arguments:"
-    print tw.fill("  -h  --help      Display this help")
-    print tw.fill("  -e  --ext=      The extension (type) of the files to save, defaults to 'png'")
-    print tw.fill("  -b  --base=     The base filename (without extension) to use, needs to have a %d to replace with slice number, defaults to '%04d'")
-    print tw.fill("  -x #-#          The x coordinate to extract given as two integers seperated by a dash")
-    print tw.fill("  -y #-#          The y coordinate to extract given as two integers seperated by a dash")
-    print tw.fill("  -z indices      The slice indices to use, accepts integers with commas and dashes between them")
-    for l in imfilter_util.usage: print tw.fill(l) if len(l) > 20 and l[0] == ' ' else l
+    if msg != None: print(fill(msg, w), file=stderr)
+    print("Usage:")
+    print(tw.fill("  %s [args] input.mrc output_directory" % basename(argv[0])))
+    print("")
+    print("Supports numerous file formats based on extension. Not all types can be saved to with all options.")
+    print("")
+    print("Optional arguments:")
+    print(tw.fill("  -h  --help      Display this help"))
+    print(tw.fill("  -e  --ext=      The extension (type) of the files to save, defaults to 'png'"))
+    print(tw.fill("  -b  --base=     The base filename (without extension) to use, needs to have a %d to replace with slice number, defaults to '%04d'"))
+    print(tw.fill("  -x #-#          The x coordinate to extract given as two integers seperated by a dash"))
+    print(tw.fill("  -y #-#          The y coordinate to extract given as two integers seperated by a dash"))
+    print(tw.fill("  -z indices      The slice indices to use, accepts integers with commas and dashes between them"))
+    for l in imfilter_util.usage: print(tw.fill(l) if len(l) > 20 and l[0] == ' ' else l)
     exit(err)
         
 if __name__ == "__main__":
     from os.path import realpath
     from sys import argv
     from getopt import getopt, GetoptError
-    import imfilter_util
+    from . import imfilter_util
 
-    from utils import make_dir
-    from mrc import MRC
+    from .utils import make_dir
+    from .mrc import MRC
     
     
     if len(argv) < 2: help_msg(1)
@@ -101,7 +101,7 @@ if __name__ == "__main__":
                 else: # range of numbers
                     p = [int(p) for p in p.split('-') if p.isdigit()]
                     if len(p) != 2 or p[0] < 0 or p[1] < p[0]: help_msg(2, "Invalid z argument supplied")
-                    z.extend(range(p[0], p[1] + 1))
+                    z.extend(list(range(p[0], p[1] + 1)))
             z = list(set(z)) # remove duplicates
             z.sort()
         elif o == "-x":

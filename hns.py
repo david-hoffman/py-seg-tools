@@ -3,12 +3,12 @@
 Module docstring.
 """
 
-from utils import *
+from .utils import *
 check_reqs(psutil = True)
 
-from images import *
-from mrc import *
-from tasks import *
+from .images import *
+from .mrc import *
+from .tasks import *
 
 # TODO:
 #  Verify final step
@@ -42,11 +42,11 @@ def create_inv_bw_mask_cmd(model, in_mrc, out_mrc, contract = 0, extra_args = ()
 
 # Generate Texture Dictionary Data
 def genTextonDict_cmd(images, labels, output='textondict.ssv'): # images are already blurred
-    from itertools import izip
+    
 
     if len(images) == 0 or len(images) != len(labels): raise ValueError()
     args = ['hnsGenTextonDict']
-    for v, l in izip(images, labels):
+    for v, l in zip(images, labels):
         args.append('-v'); args.append(v)
         args.append('-l'); args.append(l)
     #TODO: Defaults used:
@@ -57,11 +57,11 @@ def genTextonDict_cmd(images, labels, output='textondict.ssv'): # images are alr
 
 # Generate Training Data
 def rf_train_cmd(bcfeats, bclabels, treeNum, mtry, sampsize=0, output='bcmodel'):
-    from itertools import izip
+    
 
     if len(bcfeats) == 0 or len(bcfeats) != len(bclabels): raise ValueError()
     args = ['rf_train']
-    for f, l in izip(bcfeats, bclabels):
+    for f, l in zip(bcfeats, bclabels):
         args.append('-f'); args.append(f)
         args.append('-l'); args.append(l)
     args.append(treeNum)
@@ -78,11 +78,11 @@ def rf_predict_procs(proc, model, features, predictions):
     cnt = len(features)
     max = proc.max_tasks_at_once
     if cnt < max:
-        ranges = ([x] for x in xrange(cnt))
+        ranges = ([x] for x in range(cnt))
     else:
         ranges, n, r, x = [], cnt / max, cnt % max, 0
-        for _ in xrange(r):      ranges.append(range(x, x + n + 1, 1)); x += n + 1
-        for _ in xrange(r, max): ranges.append(range(x, x + n, 1)); x += n
+        for _ in range(r):      ranges.append(list(range(x, x + n + 1, 1))); x += n + 1
+        for _ in range(r, max): ranges.append(list(range(x, x + n, 1))); x += n
     for r in ranges:
         args = base[:]
         inputs = [model,]
@@ -101,35 +101,35 @@ def help_msg(err = 0, msg = None):
     
     w = max(get_terminal_width(), 40)
     tw = TextWrapper(width = w, subsequent_indent = ' '*21)
-    if msg != None: print >> stderr, fill(msg, w)
-    print "Usage:"
-    print tw.fill("  %s [args] training.mrc training.mod full.mrc output.mod" % basename(argv[0]))
-    print ""
-    print "Optional algorithm parameters:"
-    print tw.fill("  -w  --water-lvl=   The watershed water level parameter, probably <=0.02, if not provided will calculate an acceptable value and save it in the temp directory")
-    print tw.fill("  -c  --contract=    The amount to contract contours by to make them inside the membranes")
-    print tw.fill("  -s  --sigma=       The amount of Gaussian blur to use, default is 1.0 while 0.0 turns off blurring")
-    print tw.fill("  -S  --chm-nstage=  The number of stages of processing to perform during CHM segmentation, default is 2")
-    print tw.fill("  -L  --chm-nlevel=  The number of levels of processing to perform during each stage of CHM segmentation, default is 4")
-    print tw.fill("  -O  --chm-overlap= The overlap of the blocks used when CHM testing specified as a single number or two numbers (for X and Y), default is 25x25")
-    print tw.fill("  --no-histeq        Do not perform histogram equalization on testing data using the histogram from the training data");
-    print tw.fill("  --num-trees=       Number of random forest trees, should be at least 100, default is 255 - larger will be slower")
-    print tw.fill("  --mtry=            Number of features to use in each node in RF, should be <<85, default is sqrt(total features)")
-    print tw.fill("  --samp-size=       Fraction of samples used in each node in RF, default is 0.7")
-    print tw.fill("  --pm-area-thresh0= Pre-merge area threshold #1, default is 50")
-    print tw.fill("  --pm-area-thresh1= Pre-merge area threshold #2, default is 200")
-    print tw.fill("  --pm-prop-thresh=  Pre-merge average probability threshold, default is 0.5")
-    print ""
-    print "Other optional arguments:"
-    print tw.fill("  -h  --help         Display this help")
-    print tw.fill("  -t  --temp=        Set temporary directory, default value is ./temp")
-    print tw.fill("  -j  --jobs=        Maximum number of jobs to do at once, default is num of processors")
-    print tw.fill("  -u  --rusage=      Save the resources usage (memory and time) for each run process to a file")
-    print tw.fill("  -C  --cluster=     Use the cluster specified by the file for some operations, defaults to running everything locally")
+    if msg != None: print(fill(msg, w), file=stderr)
+    print("Usage:")
+    print(tw.fill("  %s [args] training.mrc training.mod full.mrc output.mod" % basename(argv[0])))
+    print("")
+    print("Optional algorithm parameters:")
+    print(tw.fill("  -w  --water-lvl=   The watershed water level parameter, probably <=0.02, if not provided will calculate an acceptable value and save it in the temp directory"))
+    print(tw.fill("  -c  --contract=    The amount to contract contours by to make them inside the membranes"))
+    print(tw.fill("  -s  --sigma=       The amount of Gaussian blur to use, default is 1.0 while 0.0 turns off blurring"))
+    print(tw.fill("  -S  --chm-nstage=  The number of stages of processing to perform during CHM segmentation, default is 2"))
+    print(tw.fill("  -L  --chm-nlevel=  The number of levels of processing to perform during each stage of CHM segmentation, default is 4"))
+    print(tw.fill("  -O  --chm-overlap= The overlap of the blocks used when CHM testing specified as a single number or two numbers (for X and Y), default is 25x25"))
+    print(tw.fill("  --no-histeq        Do not perform histogram equalization on testing data using the histogram from the training data"));
+    print(tw.fill("  --num-trees=       Number of random forest trees, should be at least 100, default is 255 - larger will be slower"))
+    print(tw.fill("  --mtry=            Number of features to use in each node in RF, should be <<85, default is sqrt(total features)"))
+    print(tw.fill("  --samp-size=       Fraction of samples used in each node in RF, default is 0.7"))
+    print(tw.fill("  --pm-area-thresh0= Pre-merge area threshold #1, default is 50"))
+    print(tw.fill("  --pm-area-thresh1= Pre-merge area threshold #2, default is 200"))
+    print(tw.fill("  --pm-prop-thresh=  Pre-merge average probability threshold, default is 0.5"))
+    print("")
+    print("Other optional arguments:")
+    print(tw.fill("  -h  --help         Display this help"))
+    print(tw.fill("  -t  --temp=        Set temporary directory, default value is ./temp"))
+    print(tw.fill("  -j  --jobs=        Maximum number of jobs to do at once, default is num of processors"))
+    print(tw.fill("  -u  --rusage=      Save the resources usage (memory and time) for each run process to a file"))
+    print(tw.fill("  -C  --cluster=     Use the cluster specified by the file for some operations, defaults to running everything locally"))
     exit(err)
 
 def die(err, msg):
-    print >> stderr, msg
+    print(msg, file=stderr)
     exit(err)
 
 
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     from os.path import exists, isdir, join, realpath, relpath
     from os import getcwd
     from math import isnan
-    from itertools import izip, product
+    from itertools import product
 
     #argv = [argv[0], '-w0.01', 'training.mrc', 'training.mod', 'full.mrc', 'output.mod']
 
@@ -207,16 +207,16 @@ if __name__ == "__main__":
         elif o == "-u" or o == "--rusage":
             if rusage_log != None: help_msg(2, "Must be only one 'rusage' argument")
             try:
-                from os_ext import wait4 # make sure wait4 is available
+                from .os_ext import wait4 # make sure wait4 is available
                 rusage_log = realpath(a)
             except ImportError:
-                print >> stderr, "Warning: System does not support recording resource usage, 'rusage' argument ignored."
+                print("Warning: System does not support recording resource usage, 'rusage' argument ignored.", file=stderr)
         elif o == "-C" or o == "--cluster":
             if cluster != None: help_msg(2, "Must be only one 'cluster' argument")
             try: from cluster import Cluster
-            except ImportError: print >> stderr, "Warning: Cluster service requires the SAGA Python module. See saga-project.github.io. Cluster will not be used."
+            except ImportError: print("Warning: Cluster service requires the SAGA Python module. See saga-project.github.io. Cluster will not be used.", file=stderr)
             try: cluster = Cluster(a)
-            except Exception:   print >> stderr, "Warning: Cluster information could not be read. Cluster will not be used."
+            except Exception:   print("Warning: Cluster information could not be read. Cluster will not be used.", file=stderr)
         elif o == "no-histeq":
             if not histeq: help_msg(2, "Must be only one 'no-histeq' argument")
             histeq = False
@@ -286,8 +286,8 @@ if __name__ == "__main__":
     bytes_f = mrc_f.section_full_data_size
     chm_block_size = '%dx%d' % (mrc_t.nx, mrc_t.ny)
     chm_overlap    = '%dx%d' % chm_overlap
-    zs_t = range(len(mrc_t))
-    zs_f = range(len(mrc_f))
+    zs_t = list(range(len(mrc_t)))
+    zs_f = list(range(len(mrc_f)))
     mrc_t.close()
     mrc_f.close()
 
@@ -329,7 +329,7 @@ if __name__ == "__main__":
 
     chm_working_folder = 'chm_temp'
     chm_model_files = ([join(chm_working_folder, 'param.mat'), join(chm_working_folder, 'MODEL_level0_stage%d.mat' % chm_nstage)] +
-                       [join(chm_working_folder, 'MODEL_level%d_stage%d.mat' % (l,s)) for s, l in product(xrange(1,chm_nstage), xrange(chm_nlevel+1))])
+                       [join(chm_working_folder, 'MODEL_level%d_stage%d.mat' % (l,s)) for s, l in product(range(1,chm_nstage), range(chm_nlevel+1))])
     
     t_p_mat_folder = join(chm_working_folder, 'output_level0_stage%d' % chm_nstage)
     t_p_blur_folder = 't_p_blur'
@@ -423,15 +423,15 @@ if __name__ == "__main__":
     memseg.add(('CHM_train', join(t_d_tif_folder, t_chm_files), join(t_s_bw_tif_folder, t_chm_files), '-m', chm_working_folder, '-S', chm_nstage, '-L', chm_nlevel), t_d_tif+t_s_bw_tif, t_p_mat+chm_model_files, 'chm-nstage', 'chm-nlevel').pressure(mem=75*GB, cpu=least_jobs)
     [memseg.add(('CHM_test', fd, f_p_tif_folder, '-s', '-m', chm_working_folder, '-b', chm_block_size, '-o', chm_overlap), [fd] + chm_model_files, fp, 'chm-overlap', can_run_on_cluster=True).pressure(mem=10*GB) for fd, fp in zip(f_d_tif, f_p_tif)]
     
-    [memseg.add(('conv_img',       mat, mha), mat, mha).pressure(mem = 20*MB + 6*pxls_t) for mat, mha in izip(t_p_mat, t_p_mha)]
-    [memseg.add(('conv_img', '-F', tif, mha), tif, mha).pressure(mem = 20*MB + 6*pxls_f) for tif, mha in izip(f_p_tif, f_p_mha)]
+    [memseg.add(('conv_img',       mat, mha), mat, mha).pressure(mem = 20*MB + 6*pxls_t) for mat, mha in zip(t_p_mat, t_p_mha)]
+    [memseg.add(('conv_img', '-F', tif, mha), tif, mha).pressure(mem = 20*MB + 6*pxls_f) for tif, mha in zip(f_p_tif, f_p_mha)]
     if sigma == 0.0:
         # TODO: does this actually work? I probably should just copy all at once instead of seperate processes
-        [memseg.add(('cp', mha, blur), mha, blur, 'sigma').pressure(mem = 20*MB) for mha, blur in izip(t_p_mha, t_p_blur)]
-        [memseg.add(('cp', mha, blur), mha, blur, 'sigma').pressure(mem = 20*MB) for mha, blur in izip(f_p_mha, f_p_blur)]
+        [memseg.add(('cp', mha, blur), mha, blur, 'sigma').pressure(mem = 20*MB) for mha, blur in zip(t_p_mha, t_p_blur)]
+        [memseg.add(('cp', mha, blur), mha, blur, 'sigma').pressure(mem = 20*MB) for mha, blur in zip(f_p_mha, f_p_blur)]
     else:
-        [memseg.add(('conv_img', blur,       mat, blur), mat, blur, 'sigma').pressure(mem = 20*MB + 6*pxls_t) for mat, blur in izip(t_p_mat, t_p_blur)]
-        [memseg.add(('conv_img', blur, '-F', tif, blur), tif, blur, 'sigma').pressure(mem = 20*MB + 6*pxls_f) for tif, blur in izip(f_p_tif, f_p_blur)]
+        [memseg.add(('conv_img', blur,       mat, blur), mat, blur, 'sigma').pressure(mem = 20*MB + 6*pxls_t) for mat, blur in zip(t_p_mat, t_p_blur)]
+        [memseg.add(('conv_img', blur, '-F', tif, blur), tif, blur, 'sigma').pressure(mem = 20*MB + 6*pxls_f) for tif, blur in zip(f_p_tif, f_p_blur)]
 
 
     ### Training Phase ###
@@ -446,45 +446,45 @@ if __name__ == "__main__":
         ## TODO: create hnsCalculateWatershedThreshold
         memseg.add(('hnsCalculateWatershedThreshold', zs_t[0], zs_t[-1], join(t_p_blur_folder, '%04d.mha'), join(t_s_clr_mha_folder, '%04d.mha'), areaThreshold0, areaThreshold1, probThreshold),
                    (t_p_blur, t_s_clr_mha), wl_file, ('waterlevel', 'pm-area-threshold-0', 'pm-area-threshold-1', 'pm-prob-threshold'), stdout=wl_file).pressure(cpu=4)
-    [memseg.add(('hnsWatershed', pb, wl if wl else wl_file, iseg), pb if wl else (pb, wl_file), iseg, 'waterlevel') for pb, iseg in izip(t_p_blur, t_is1)]
+    [memseg.add(('hnsWatershed', pb, wl if wl else wl_file, iseg), pb if wl else (pb, wl_file), iseg, 'waterlevel') for pb, iseg in zip(t_p_blur, t_is1)]
     # 3 - Training initial segmentation (pre-merging)
     # Defaults used:
     #   [6] writeToUInt16Image       -> 0 (means write uint32 label image which is what we want)
     #   [7] consecutiveOutputLabels  -> 1 (must be 1)
-    [memseg.add(('hnsMerge', iseg1, pb, areaThreshold0, areaThreshold1, probThreshold, iseg2), (iseg1, pb), iseg2, ('pm-area-threshold-0', 'pm-area-threshold-1', 'pm-prob-threshold')) for iseg1, pb, iseg2 in izip(t_is1, t_p_blur, t_is2)]
+    [memseg.add(('hnsMerge', iseg1, pb, areaThreshold0, areaThreshold1, probThreshold, iseg2), (iseg1, pb), iseg2, ('pm-area-threshold-0', 'pm-area-threshold-1', 'pm-prob-threshold')) for iseg1, pb, iseg2 in zip(t_is1, t_p_blur, t_is2)]
     # 4 - Training merge generation
-    [memseg.add(('hnsGenMerges', iseg, pb, t, s), (iseg, pb), (t, s)) for iseg, pb, t, s in izip(t_is2, t_p_blur, t_tree, t_sal)]
+    [memseg.add(('hnsGenMerges', iseg, pb, t, s), (iseg, pb), (t, s)) for iseg, pb, t, s in zip(t_is2, t_p_blur, t_tree, t_sal)]
     # 5 - Training boundary feature generation
     # Note that the following are now optional and can have 'NULL' instead
     #   [4] rawImageName
     #   [5] pbImageName
     #   [6] textonDictFileName (skipping this will largely accelerate the program but may worsen the accuracy by a little)
-    [memseg.add(('hnsGenBoundaryFeatures', iseg, t, s, db, p, textondict, bcf), (iseg, t, s, db, p, textondict), bcf, can_run_on_cluster=True) for iseg, t, s, db, p, bcf in izip(t_is2, t_tree, t_sal, t_d_blur, t_p_mha, t_bcf)]
+    [memseg.add(('hnsGenBoundaryFeatures', iseg, t, s, db, p, textondict, bcf), (iseg, t, s, db, p, textondict), bcf, can_run_on_cluster=True) for iseg, t, s, db, p, bcf in zip(t_is2, t_tree, t_sal, t_d_blur, t_p_mha, t_bcf)]
     # 6 - Training boundary label generation
-    [memseg.add(('hnsGenBoundaryLabels', iseg, t, l, bcl), (iseg, t, l), bcl) for iseg, t, l, bcl in izip(t_is2, t_tree, t_s_clr_mha, t_bcl)]
+    [memseg.add(('hnsGenBoundaryLabels', iseg, t, l, bcl), (iseg, t, l), bcl) for iseg, t, l, bcl in zip(t_is2, t_tree, t_s_clr_mha, t_bcl)]
     # 7 - Training Data Generation
     memseg.add(rf_train_cmd(t_bcf, t_bcl, treeNum, mtry, sampSize, bcmodel), t_bcf+t_bcl, bcmodel, ('number-of-trees','mtry','sample-size'))
 
 
     ### Segmentation Phase ###
     # 2 - Full dataset initial segmentation (see notes above)
-    [memseg.add(('hnsWatershed', pb, wl if wl else wl_file, iseg), pb if wl else (pb, wl_file), iseg, 'waterlevel') for pb, iseg in izip(f_p_blur, f_is1)]
+    [memseg.add(('hnsWatershed', pb, wl if wl else wl_file, iseg), pb if wl else (pb, wl_file), iseg, 'waterlevel') for pb, iseg in zip(f_p_blur, f_is1)]
     # 3 - Training initial segmentation (pre-merging) (see notes above)
-    [memseg.add(('hnsMerge', iseg1, pb, areaThreshold0, areaThreshold1, probThreshold, iseg2), (iseg1, pb), iseg2, ('pm-area-threshold-0', 'pm-area-threshold-1', 'pm-prob-threshold')) for iseg1, pb, iseg2 in izip(f_is1, f_p_blur, f_is2)]
+    [memseg.add(('hnsMerge', iseg1, pb, areaThreshold0, areaThreshold1, probThreshold, iseg2), (iseg1, pb), iseg2, ('pm-area-threshold-0', 'pm-area-threshold-1', 'pm-prob-threshold')) for iseg1, pb, iseg2 in zip(f_is1, f_p_blur, f_is2)]
     # 4 - Full dataset merge generation
-    [memseg.add(('hnsGenMerges', iseg, pb, t, s), (iseg, pb), (t, s)) for iseg, pb, t, s in izip(f_is2, f_p_blur, f_tree, f_sal)]
+    [memseg.add(('hnsGenMerges', iseg, pb, t, s), (iseg, pb), (t, s)) for iseg, pb, t, s in zip(f_is2, f_p_blur, f_tree, f_sal)]
     # 5 - Full dataset boundary feature generation (see notes above)
-    [memseg.add(('hnsGenBoundaryFeatures', iseg, t, s, db, p, textondict, bcf), (iseg, t, s, db, p, textondict), bcf, can_run_on_cluster=True) for iseg, t, s, db, p, bcf in izip(f_is2, f_tree, f_sal, f_d_blur, f_p_mha, f_bcf)]
+    [memseg.add(('hnsGenBoundaryFeatures', iseg, t, s, db, p, textondict, bcf), (iseg, t, s, db, p, textondict), bcf, can_run_on_cluster=True) for iseg, t, s, db, p, bcf in zip(f_is2, f_tree, f_sal, f_d_blur, f_p_mha, f_bcf)]
     # 8 - Generate Predictions
     rf_predict_procs(memseg, bcmodel, f_bcf, f_bcp)
     # 9 - Segment
     # Defaults used:
     #   [4] labelOutputBinaryImageConnectedComponents -> 1 (must be 1)
     #   [5] writeToUInt16Image       -> 0 (means write uint32 label image which is what we want)
-    [memseg.add(('hnsSegment', iseg, t, bcp, fseg), (iseg, t, bcp), fseg) for iseg, t, bcp, fseg in izip(f_is2, f_tree, f_bcp, f_fs)]
+    [memseg.add(('hnsSegment', iseg, t, bcp, fseg), (iseg, t, bcp), fseg) for iseg, t, bcp, fseg in zip(f_is2, f_tree, f_bcp, f_fs)]
     
     ### Convert output files ###
-    [memseg.add(('hnsGenOrderedContours', fseg, z, sp), fseg, sp) for fseg, z, sp in izip(f_fs, zs_f, seg_pts)]
+    [memseg.add(('hnsGenOrderedContours', fseg, z, sp), fseg, sp) for fseg, z, sp in zip(f_fs, zs_f, seg_pts)]
     memseg.add(['combine_points',] + seg_pts + [seg_pts_all,], seg_pts, seg_pts_all)
     # TODO: -im and pixel spacing?
     memseg.add(('point2model', '-im', mrc_f_filename, seg_pts_all, mod_output), (mrc_f_filename,seg_pts_all), mod_output)

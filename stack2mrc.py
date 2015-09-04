@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from utils import check_reqs
+from .utils import check_reqs
 check_reqs()
 
 """
@@ -18,11 +18,11 @@ def stack2mrc(stack, mrc, imfilter = lambda im: im):
     Optional Arguments:
     imfilter  -- a function/callable that takes and returns an image
     """
-    from mrc import MRC
-    from images import imread
+    from .mrc import MRC
+    from .images import imread
 
     stack = iter(stack)
-    try: img = imfilter(imread(stack.next()))
+    try: img = imfilter(imread(next(stack)))
     except StopIteration: raise ValueError("Must provide at least one image")
     mrc = MRC(mrc, nx=img.shape[1], ny=img.shape[0], dtype=img.dtype)
     mrc.append(img)
@@ -34,21 +34,21 @@ def help_msg(err = 0, msg = None):
     from os.path import basename
     from sys import stderr, argv, exit
     from textwrap import fill, TextWrapper
-    from utils import get_terminal_width
-    import imfilter_util
+    from .utils import get_terminal_width
+    from . import imfilter_util
     w = max(get_terminal_width(), 20)
     tw = TextWrapper(width = w, subsequent_indent = ' '*18)
-    if msg != None: print >> stderr, fill(msg, w)
-    print "Usage:"
-    print tw.fill("  %s [args] input1.xxx [input2.xxx ...] output.mrc" % basename(argv[0]))
-    print ""
-    print "You may also use a glob-like syntax for any of the input files, such as 'folder/*.png' or '[0-9][0-9][0-9].png'"
-    print ""
-    print "Supports numerous file formats. MHA/MHD files must have the proper file extension. Other files will have their data examined to determine type. All images must have the same dimensions and pixel format. Not all pixel formats all supported."
-    print ""
-    print "Optional arguments:"
-    print tw.fill("  -h  --help      Display this help")
-    for l in imfilter_util.usage: print tw.fill(l) if len(l) > 20 and l[0] == ' ' else l
+    if msg != None: print(fill(msg, w), file=stderr)
+    print("Usage:")
+    print(tw.fill("  %s [args] input1.xxx [input2.xxx ...] output.mrc" % basename(argv[0])))
+    print("")
+    print("You may also use a glob-like syntax for any of the input files, such as 'folder/*.png' or '[0-9][0-9][0-9].png'")
+    print("")
+    print("Supports numerous file formats. MHA/MHD files must have the proper file extension. Other files will have their data examined to determine type. All images must have the same dimensions and pixel format. Not all pixel formats all supported.")
+    print("")
+    print("Optional arguments:")
+    print(tw.fill("  -h  --help      Display this help"))
+    for l in imfilter_util.usage: print(tw.fill(l) if len(l) > 20 and l[0] == ' ' else l)
     exit(err)
         
 if __name__ == "__main__":
@@ -56,8 +56,8 @@ if __name__ == "__main__":
     from sys import argv
     from getopt import getopt, GetoptError
     from glob import iglob
-    import imfilter_util
-    from mrc import MRC
+    from . import imfilter_util
+    from .mrc import MRC
     
     if len(argv) < 2: help_msg(1)
     

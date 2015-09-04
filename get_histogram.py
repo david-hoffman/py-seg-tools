@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from utils import check_reqs
+from .utils import check_reqs
 check_reqs()
 
 """
@@ -11,22 +11,22 @@ def help_msg(err = 0, msg = None):
     from os.path import basename
     from sys import stderr, argv, exit
     from textwrap import fill, TextWrapper
-    from utils import get_terminal_width
-    import imfilter_util
+    from .utils import get_terminal_width
+    from . import imfilter_util
     w = max(get_terminal_width(), 20)
     tw = TextWrapper(width = w, subsequent_indent = ' '*18)
-    if msg != None: print >> stderr, fill(msg, w)
-    print "Usage:"
-    print tw.fill("  %s [args] input1.xxx [input2.xxx ...] output.txt" % basename(argv[0]))
-    print ""
-    print tw.fill("You may also use a glob-like syntax for any of the input files, such as 'folder/*.png' or '[0-9][0-9][0-9].png'. Outputs to stdout if output is -.")
-    print ""
-    print tw.fill("Supports numerous file formats. Sums the histogram from all given images. Saves a list of integers to the output file.")
-    print ""
-    print "Optional arguments:"
-    print tw.fill("  -h  --help      Display this help")
-    print tw.fill("  -n  --nbins=    Number of bins in the histogram, defaults to 256")
-    for l in imfilter_util.usage: print tw.fill(l)
+    if msg != None: print(fill(msg, w), file=stderr)
+    print("Usage:")
+    print(tw.fill("  %s [args] input1.xxx [input2.xxx ...] output.txt" % basename(argv[0])))
+    print("")
+    print(tw.fill("You may also use a glob-like syntax for any of the input files, such as 'folder/*.png' or '[0-9][0-9][0-9].png'. Outputs to stdout if output is -."))
+    print("")
+    print(tw.fill("Supports numerous file formats. Sums the histogram from all given images. Saves a list of integers to the output file."))
+    print("")
+    print("Optional arguments:")
+    print(tw.fill("  -h  --help      Display this help"))
+    print(tw.fill("  -n  --nbins=    Number of bins in the histogram, defaults to 256"))
+    for l in imfilter_util.usage: print(tw.fill(l))
     exit(err)
 
 if __name__ == "__main__":
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     from sys import argv
     from getopt import getopt, GetoptError
     from glob import iglob
-    from images import imhist
+    from .images import imhist
     from numpy import savetxt
 
     if len(argv) < 2: help_msg(1)

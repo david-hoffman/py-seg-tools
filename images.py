@@ -159,7 +159,7 @@ def imhist(im, nbins=256):
     Calculate the histogram of an image. By default it uses 256 bins (nbins).
     The 'im' argument can be an array, a path (string), or an iterable of these.
     """
-    if isinstance(im, basestring): im = imread(im)
+    if isinstance(im, str): im = imread(im)
     if hasattr(im, 'dtype'):
         if not is_image_besides_rgb24(im): raise ValueError('Unsupported image type')
         from numpy import histogram
@@ -226,13 +226,13 @@ def relabel(im):
     from scipy.ndimage import label
     im,N = consecutively_number(im)
     _,mx = _get_min_max(im)
-    for i in xrange(1, N+1):
+    for i in range(1, N+1):
         l,n = label(im==i)
         if N+n-1 > mx:
             # The new set of labels is larger than the current data type can store
             im,_ = _conv_type(im, N+n-1)
             _,mx = _get_min_max(im)
-        for j in xrange(2, n+1):
+        for j in range(2, n+1):
             N = N+1
             im[l==j] = N
     return im, N
@@ -320,7 +320,7 @@ def imread_mat(filename, name = None):
         x = loadmat(filename, variable_names = name)
         if name == None:
             name = '__' # we need to find first
-            for name in x.iterkeys():
+            for name in x.keys():
                 if name[:2] != '__': break
             if name[:2] == '__': raise KeyError() # no variables
         return x[name] # can raise key error
@@ -332,7 +332,7 @@ def imread_mat(filename, name = None):
         from h5py import File as HDF5File # TODO: if import error try using PyTables
         with HDF5File(filename, 'r') as x: # IOError if it doesn't exist or is the wrong format
             if name == None:
-                try: name = x.iterkeys().next()
+                try: name = next(iter(x.keys()))
                 except StopIteration: raise KeyError() # no variables
             return x[name].value.T # can raise key error
 
@@ -360,10 +360,10 @@ def imread(filename):
     ext = splitext(filename)[1].lower()
     if ext == '.mat':   return imread_mat(filename)
     elif ext == '.mha':
-        from metafile import imread_mha
+        from .metafile import imread_mha
         return imread_mha(filename)[1]
     elif ext == '.mhd':
-        from metafile import imread_mhd
+        from .metafile import imread_mhd
         return imread_mhd(filename)[1]
     else:
         from scipy.misc import imread
@@ -397,10 +397,10 @@ def imsave(filename, im):
     
     ext = splitext(filename)[1].lower()
     if ext == '.mha':
-        from metafile import imsave_mha
+        from .metafile import imsave_mha
         imsave_mha(filename, im)
     elif ext == '.mhd':
-        from metafile import imsave_mhd
+        from .metafile import imsave_mhd
         imsave_mhd(filename, im)
     elif im.dtype == IM_BIT:
         # Make sure data is actually saved as 1-bit data

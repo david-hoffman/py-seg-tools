@@ -36,15 +36,15 @@ def help_msg(err = 0, msg = None):
     from os.path import basename
     from sys import stderr, argv, exit
     from textwrap import fill, TextWrapper
-    from utils import get_terminal_width
+    from .utils import get_terminal_width
     w = max(get_terminal_width(), 20)
     tw = TextWrapper(width = w, subsequent_indent = ' '*18)
-    if msg != None: print >> stderr, fill(msg, w)
-    print "Usage:"
-    print tw.fill("  %s input.pts [input2.pts ...] output.pts" % basename(argv[0]))
-    print ""
-    print "Optional arguments:"
-    print tw.fill("  -h  --help      Display this help")
+    if msg != None: print(fill(msg, w), file=stderr)
+    print("Usage:")
+    print(tw.fill("  %s input.pts [input2.pts ...] output.pts" % basename(argv[0])))
+    print("")
+    print("Optional arguments:")
+    print(tw.fill("  -h  --help      Display this help"))
     exit(err)
         
 if __name__ == "__main__":

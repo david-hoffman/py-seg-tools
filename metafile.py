@@ -1,6 +1,6 @@
 from collections import Iterable
-from gzip import GzipFile
-from images import *
+from .gzip import GzipFile
+from .images import *
 from itertools import product
 from numpy import array, empty, frombuffer, fromfile, prod, ravel
 import re
@@ -21,7 +21,7 @@ dtype2met = {
     IM_FLOAT  : 'MET_FLOAT',
     IM_DOUBLE : 'MET_DOUBLE',
 }
-met2dtype = { v:k for k,v in dtype2met.iteritems() }
+met2dtype = { v:k for k,v in dtype2met.items() }
 
 file_list = re.compile('^LIST(\s+(\d+)D?)?$', re.IGNORECASE)
 file_pattern = re.compile('^(\S*%[#0-9 +.-]*[hlL]?[dD]\S*)\s+(\d+)\s+(\d+)\s+(\d+)$')
@@ -32,7 +32,7 @@ def _split(x):
     return x.split()
 def _bool(x):
     if isinstance(x, bool): return x
-    if isinstance(x, basestring):
+    if isinstance(x, str):
         if x.lower() == 'false' or x.lower() == 'f': return False
         if x.lower() == 'true'  or x.lower() == 't': return True
     return bool(x)
@@ -97,7 +97,7 @@ def imread_mhd(filename):
                 file_ndims = int(re_search.last_match.group(2)) if re_search.last_match.lastindex == 1 else int(tags['ndims']) - 1
                 nfiles = prod([int(x) for x in _split(tags['dimsize'])][file_ndims:])
                 files = [] # used later
-                for i in xrange(nfiles): files.append(f.readline())
+                for i in range(nfiles): files.append(f.readline())
             line = f.readline(256)
         off = f.tell() - len(line)
 
@@ -146,9 +146,9 @@ def imread_mhd(filename):
         data = empty(shape, dtype)
         shape = shape[:file_ndims]
         ind = [slice(None)] * ndims
-        inds = product(*(xrange(x) for x in shape[file_ndims:]))
+        inds = product(*(range(x) for x in shape[file_ndims:]))
         for i, f in enumerate(files):
-            ind[file_ndims:] = inds.next()
+            ind[file_ndims:] = next(inds)
             data[ind] = read_data_file(os.path.realpath(os.path.join(directory, f)), headersize, compressed, dtype, shape)
         return tags_raw, data
     elif re_search(file_pattern, datafile):
@@ -158,7 +158,7 @@ def imread_mhd(filename):
         if stop < start or step <= 0 or shape[-1] != (stop - start)//step + 1: raise ValueError('MHA/MHD invalid ElementDataFile')
         data = empty(shape, dtype)
         shape = shape[:-1]
-        for i in xrange(start, stop + 1, step):
+        for i in range(start, stop + 1, step):
             data[..., i] = read_data_file(os.path.realpath(os.path.join(directory, pattern % i)), headersize, compressed, dtype, shape)
         return tags_raw, data
     else:
@@ -170,7 +170,7 @@ def imread_mhd(filename):
 def list2str(l): return ' '.join(str(x) for x in l)
 def lookup(l):   return {x.lower():x for x in l}
 def float_list(k, v, n): # key, value, number of floats
-    if isinstance(v, basestring): v = _split(v)
+    if isinstance(v, str): v = _split(v)
     if isinstance(v, Iterable):
         v = [float(V) for V in ravel(v)] # ravel is necessary for multidimensional inputs, particularly for Orientation values
         if len(v) == 1: v *= n
@@ -251,7 +251,7 @@ def imsave_mhd(filename, im, datafile=None, CompressedData=False, **tags):
         ('Rotation', 'Orientation', 'TransformMatrix'),
         )
 
-    for k_,v in tags.items():
+    for k_,v in list(tags.items()):
         k = k_.lower()
         if k in not_allowed: raise ValueError('Setting the tag "' + k_ + '" is not allowed')
         elif k in string:
@@ -313,7 +313,7 @@ def imsave_mhd(filename, im, datafile=None, CompressedData=False, **tags):
         ('BinaryDataByteOrderMSB', str(im.dtype.byteorder == '>' or im.dtype.byteorder == '=' and byteorder != 'little')),
         ('CompressedData', str(_bool(CompressedData))),
         ]
-    alltags.extend(tags.iteritems())
+    alltags.extend(iter(tags.items()))
     if is_rgb24(im):
         alltags.append(('ElementType', 'MET_UCHAR_ARRAY'))
         alltags.append(('ElementNumberOfChannels', '3'))

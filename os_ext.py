@@ -111,11 +111,11 @@ else:
         
         rusage = struct_rusage(
             ru_utime = ft2Sec(utime), ru_stime = ft2Sec(stime),
-            ru_maxrss = mem.PeakWorkingSetSize // 1024, ru_ixrss = 0L, ru_idrss = 0L, ru_isrss = 0L,
-            ru_minflt = mem.PageFaultCount, ru_majflt = 0L, ru_nswap = 0L,
+            ru_maxrss = mem.PeakWorkingSetSize // 1024, ru_ixrss = 0, ru_idrss = 0, ru_isrss = 0,
+            ru_minflt = mem.PageFaultCount, ru_majflt = 0, ru_nswap = 0,
             ru_inblock = io.ReadOperationCount, ru_oublock = io.WriteOperationCount,
-            ru_msgsnd = 0L, ru_msgrcv = 0L, ru_nsignals = 0L,
-            ru_nvcsw = 0L, ru_nivcsw = 0L,
+            ru_msgsnd = 0, ru_msgrcv = 0, ru_nsignals = 0,
+            ru_nvcsw = 0, ru_nivcsw = 0,
             )
         
         return pid, exitcode.value, rusage

@@ -2,8 +2,8 @@ def check_reqs(scipy = True, numpy = True, PIL = True, psutil = False):
     """Checks to see if the required 3rd-party modules are available for import."""
     def __die(name):
         from sys import stderr, exit
-        print >> stderr, "Could not import the required module %s" % name
-        print >> stderr, "Try running 'easy_install %s' to install it" % name
+        print("Could not import the required module %s" % name, file=stderr)
+        print("Try running 'easy_install %s' to install it" % name, file=stderr)
         exit(1)
     if scipy:
         try: import scipy
@@ -42,11 +42,11 @@ def only_keep_num(d, allowed, match_slice = slice(None), pattern='*'):
     files = ((f, basename(f)[match_slice]) for f in iglob(join(d, pattern)) if isfile(f))
     for f in (f for f, x in files if x.isdigit() and int(x) not in allowed):
         try: unlink(f)
-        except Exception, e: pass
+        except Exception as e: pass
     files = ((f, basename(f)[match_slice]) for f in iglob(join(d, '.'+pattern)) if isfile(f))
     for f in (f for f, x in files if x.isdigit() and int(x) not in allowed):
         try: unlink(f)
-        except Exception, e: pass
+        except Exception as e: pass
 
 
 def get_terminal_width():

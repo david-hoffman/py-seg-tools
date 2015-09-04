@@ -39,6 +39,7 @@ from datetime import datetime
 import re
 
 from psutil import Process, virtual_memory # not a built-in library
+import collections
 try: import saga # not a built-in library, but only required when using clustering
 except: pass
 
@@ -53,7 +54,7 @@ def get_mem_used_by_tree(proc = this_proc):
     # This would be nice, but it turns out it crashes the whole program if the process finished between creating the list of children and getting the memory usage
     # Adding "if p.is_running()" would help but still have a window for the process to finish before getting the memory usage
     #return sum((p.get_memory_info()[0] for p in proc.get_children(True)), proc.get_memory_info()[0])
-    if isinstance(proc, (int, long)): proc = Process(proc) # was given a PID
+    if isinstance(proc, int): proc = Process(proc) # was given a PID
     mem = proc.get_memory_info()[0]
     for p in proc.get_children(True):
         try:
@@ -68,7 +69,7 @@ def get_time_used_by_tree(proc = this_proc):
     provided, this process is used. The argument must be a pid or a psutils.Process object.
     Return values is in seconds.
     """
-    if isinstance(proc, (int, long)): proc = Process(proc) # was given a PID
+    if isinstance(proc, int): proc = Process(proc) # was given a PID
     time = sum(proc.get_cpu_times())
     for p in proc.get_children(True):
         try:
@@ -119,19 +120,18 @@ GB = 1024*1024*1024
 TB = 1024*1024*1024*1024
 
 @total_ordering
-class Task:
+class Task(metaclass=ABCMeta):
     """
     Abstract Task class representing a single Task to be run.
     """
-    __metaclass__ = ABCMeta
     def __init__(self, parent, name, inputs=(), outputs=(), settings=(), wd=None):
         #if len(outputs) == 0: raise ValueError('Each task must output at least one file')
         self.parent = parent     # the Tasks object that owns this task
         self.name = name         # name of this task
         self.wd = realpath(wd) if wd != None else getcwd() # working directory
-        if isinstance(inputs, basestring): inputs = (inputs,)
-        if isinstance(outputs, basestring): outputs = (outputs,)
-        if isinstance(settings, basestring): settings = (settings,)
+        if isinstance(inputs, str): inputs = (inputs,)
+        if isinstance(outputs, str): outputs = (outputs,)
+        if isinstance(settings, str): settings = (settings,)
         self.inputs = frozenset(realpath(join(self.wd, f)) for f in inputs)
         self.outputs = frozenset(realpath(join(self.wd, f)) for f in outputs)
         self.settings = frozenset(settings)
@@ -160,7 +160,7 @@ class Task:
         """
         self.pid = p.pid
         if self.parent._rusagelog:
-            from os_ext import wait4
+            from .os_ext import wait4
             pid, exitcode, rusage = wait4(self.pid, 0)
             del self.pid
             if exitcode: raise CalledProcessError(exitcode, str(self))
@@ -244,7 +244,7 @@ class TaskUsingProcess(Task):
         string or a iterable of command-line parts. The stdin/stdout/stderr can
         be strings (for files), a file-like object, or None for default.
         """
-        if isinstance(cmd, basestring):
+        if isinstance(cmd, str):
             import shlex
             cmd = shlex.split(cmd)
         else:
@@ -255,9 +255,9 @@ class TaskUsingProcess(Task):
         self.stderr = stderr
         Task.__init__(self, parent, "`%s`" % " ".join(quote(str(s)) for s in cmd), inputs, outputs, settings, wd)
     def _run(self):
-        stdin  = open(self.stdin,  'r', 1) if isinstance(self.stdin,  basestring) else self.stdin
-        stdout = open(self.stdout, 'w', 1) if isinstance(self.stdout, basestring) else self.stdout
-        stderr = open(self.stderr, 'w', 1) if isinstance(self.stderr, basestring) else self.stderr
+        stdin  = open(self.stdin,  'r', 1) if isinstance(self.stdin,  str) else self.stdin
+        stdout = open(self.stdout, 'w', 1) if isinstance(self.stdout, str) else self.stdout
+        stderr = open(self.stderr, 'w', 1) if isinstance(self.stderr, str) else self.stderr
         self._run_proc(Popen(self.cmd, cwd=self.wd, stdin=stdin, stdout=stdout, stderr=stderr))
 class TaskUsingCluster(TaskUsingProcess):
     """
@@ -279,11 +279,11 @@ class TaskUsingCluster(TaskUsingProcess):
             desc.executable = self.cmd[0]
             desc.arguments = self.cmd[1:]
             desc.environment = TODO
-            if isinstance(self.stdin, basestring): desc.input = self.stdin
+            if isinstance(self.stdin, str): desc.input = self.stdin
             elif self.stdin != None: raise ValueError("Commands running on a cluster do not support using non-file STDIN")
-            if isinstance(self.stdout, basestring): desc.output = self.stdout
+            if isinstance(self.stdout, str): desc.output = self.stdout
             elif self.stdout != None: raise ValueError("Commands running on a cluster do not support using non-file STDOUT")
-            if isinstance(self.stderr, basestring): desc.error = self.stderr
+            if isinstance(self.stderr, str): desc.error = self.stderr
             elif self.stderr != None: raise ValueError("Commands running on a cluster do not support using non-file STDERR")
             #desc.working_directory = self.wd # TODO
 
@@ -318,8 +318,8 @@ class TaskUsingCluster(TaskUsingProcess):
         else: return super(TaskUsingCluster, self).current_usage()
     @staticmethod
     def _get_time(x):
-        if isinstance(x, (int,long,float)): return x
-        elif isinstance(x, basestring):     return strptime(x)
+        if isinstance(x, (int,float)): return x
+        elif isinstance(x, str):     return strptime(x)
         elif isinstance(x, datetime):       return (x-datetime.utcfromtimestamp(0)).total_seconds()
         else: raise ValueError()
     def terminate(self):
@@ -340,7 +340,7 @@ class TaskUsingPythonFunction(Task):
         kwargs are a tuple and dictionary that are given to the target function
         as the arguments and keyword arguments.
         """
-        if not callable(target): raise ValueError('Target is not callable')
+        if not isinstance(target, collections.Callable): raise ValueError('Target is not callable')
         self.target = target
         self.args   = args
         self.kwargs = kwargs
@@ -368,8 +368,8 @@ class TaskUsingPythonProcess(Task):
         @staticmethod
         def _get_std(stdxxx, mode):
             from os import fdopen 
-            if isinstance(stdxxx, basestring):    return open(stdxxx, mode, 1)
-            elif isinstance(stdxxx, (int, long)): return fdopen(stdxxx, mode, 1)
+            if isinstance(stdxxx, str):    return open(stdxxx, mode, 1)
+            elif isinstance(stdxxx, int): return fdopen(stdxxx, mode, 1)
             return stdxxx # assume a file object
         def __init__(target, args, kwargs, wd, stdin, stdout, stderr):
             def _setup_pyproc(target, args, kwargs, wd, stdin, stdout, stderr):
@@ -394,7 +394,7 @@ class TaskUsingPythonProcess(Task):
         as the arguments and keyword arguments. The stdin/stdout/stderr can be
         strings (for files), a file-like object, or None for default.
         """
-        if not callable(target): raise ValueError('Target is not callable')
+        if not isinstance(target, collections.Callable): raise ValueError('Target is not callable')
         self.target = target
         self.args   = args
         self.kwargs = kwargs
@@ -509,7 +509,7 @@ class Tasks:
         """
         # Processes the input and output information from the task
         # Updates all before and after lists as well
-        if len(task.settings - self.settings.viewkeys()) > 0: raise ValueError('Task had settings that were not originally specified')
+        if len(task.settings - self.settings.keys()) > 0: raise ValueError('Task had settings that were not originally specified')
         if not task.inputs.isdisjoint(task.outputs): raise ValueError('A task cannot output a file that it needs for input')
         # A "generator" task is one with inputs, a "cleanup" task is one with outputs
         is_generator, is_cleanup = len(task.inputs) == 0, len(task.outputs) == 0
@@ -545,10 +545,10 @@ class Tasks:
         return self.all_tasks.get(cmd)
     def overall_inputs(self):
         """Get the overall inputs required from the entire set of tasks."""
-        return self.inputs.viewkeys() - self.outputs.viewkeys() #set(self.inputs.iterkeys()) - set(self.outputs.iterkeys())
+        return self.inputs.keys() - self.outputs.keys() #set(self.inputs.iterkeys()) - set(self.outputs.iterkeys())
     def overall_outputs(self):
         """Get the overall outputs generated from the entire set of tasks."""
-        return self.outputs.viewkeys() - self.inputs.viewkeys() #set(self.outputs.iterkeys()) - set(self.inputs.iterkeys())
+        return self.outputs.keys() - self.inputs.keys() #set(self.outputs.iterkeys()) - set(self.inputs.iterkeys())
     def __check_acyclic(self):
         """Run a thorough check for cyclic dependencies. Not actually used anywhere."""
         if len(self.outputs) == 0 and len(self.inputs) == 0: return
@@ -565,32 +565,32 @@ class Tasks:
         present for the signal handler.
         """
         
-        print '=' * 80
+        print('=' * 80)
         
         mem_sys = virtual_memory()
         mem_task = get_mem_used_by_tree()
         mem_press = self.__mem_pressure
         mem_avail = mem_sys.available - max(mem_press - mem_task, 0)
-        print 'Memory (GB): System: %d / %d    Tasks: %d [%d], Avail: %d' % (
+        print('Memory (GB): System: %d / %d    Tasks: %d [%d], Avail: %d' % (
             int(round(float(mem_sys.total - mem_sys.available) / GB)),
             int(round(float(mem_sys.total) / GB)),
             int(round(float(mem_task) / GB)),
             int(round(float(mem_press) / GB)),
-            int(round(float(mem_avail) / GB)))
+            int(round(float(mem_avail) / GB))))
 
-        task_done  = sum(1 for t in self.all_tasks.itervalues() if t.done)
+        task_done  = sum(1 for t in self.all_tasks.values() if t.done)
         task_next  = len(self.__next)
         task_run   = len(self.__running)
         task_total = len(self.all_tasks)
         task_press = self.__cpu_pressure
         task_max = self.max_tasks_at_once
-        print 'Tasks:       Running: %d [%d] / %d, Done: %d / %d, Upcoming: %d' % (task_run, task_press, task_max, task_done, task_total, task_next)
+        print('Tasks:       Running: %d [%d] / %d, Done: %d / %d, Upcoming: %d' % (task_run, task_press, task_max, task_done, task_total, task_next))
 
-        print '-' * 80
+        print('-' * 80)
         if task_run == 0:
-            print 'Running: none (probably waiting for more memory)'
+            print('Running: none (probably waiting for more memory)')
         else:
-            print 'Running:'
+            print('Running:')
             for task in sorted(self.__running):
                 text = str(task)
                 if len(text) > 60: text = text[:56] + '...' + text[-1]
@@ -604,13 +604,13 @@ class Tasks:
                     timing = ('%d:%02d:%02d' % (hours, mins - hours * 60, secs)) if hours > 0 else ('%d:%02d' % (mins, secs))
                 except: pass
                 mem = str(int(round(float(task.mem_pressure) / GB)))
-                print '%-60s %3sGB [%3s] %7s' % (text, real_mem, mem, timing)
+                print('%-60s %3sGB [%3s] %7s' % (text, real_mem, mem, timing))
 
-        print '-' * 80
+        print('-' * 80)
         if len(self.__next) == 0:
-            print 'Upcoming: none'
+            print('Upcoming: none')
         else:
-            print 'Upcoming:'
+            print('Upcoming:')
             for priority, task in sorted(self.__next):
                 text = str(task)
                 if len(text) > 60: text = text[:56] + '...' + text[-1]
@@ -618,9 +618,9 @@ class Tasks:
                 if task.mem_pressure <= mem_avail: mem += '*'
                 cpu = str(task.cpu_pressure) + 'x' if task.cpu_pressure >= 2 else ''
                 if min(task_max, task.cpu_pressure) <= (task_max - task_press): cpu += '*'
-                print '%4d %-60s %5s %4s' % (len(task.all_after()), text, mem, cpu) 
+                print('%4d %-60s %5s %4s' % (len(task.all_after()), text, mem, cpu)) 
 
-        print '=' * 80
+        print('=' * 80)
     
     def __run(self, task):
         """
@@ -746,12 +746,12 @@ class Tasks:
             # Setup log
             done_tasks = self.__process_log() if exists(self.logname) else ()
             self.__log = open(self.logname, 'w', 0)
-            for k,v in self.settings.iteritems(): self.__log.write("*"+k+"="+str(v)+"\n")
+            for k,v in self.settings.items(): self.__log.write("*"+k+"="+str(v)+"\n")
             # TODO: log overall inputs and outputs
             for dc in done_tasks:
-                if verbose: print "Skipping " + dc[20:].strip()
+                if verbose: print("Skipping " + dc[20:].strip())
                 self.__log.write(dc+"\n")
-            if verbose and len(done_tasks) > 0: print '-' * 80
+            if verbose and len(done_tasks) > 0: print('-' * 80)
             self._rusagelog = open(self.rusage_log, 'a', 1) if self.rusage_log else None
 
             # Calcualte the set of first and last tasks
@@ -785,7 +785,7 @@ class Tasks:
                     self.__running.add(task)
                     t = Thread(target=self.__run, args=(task,))
                     t.daemon = True
-                    if verbose: print strftime(Tasks.__time_format) + " Running " + str(task)
+                    if verbose: print(strftime(Tasks.__time_format) + " Running " + str(task))
                     t.start()
                     sleep(0) # make sure it starts
 
@@ -845,12 +845,12 @@ class Tasks:
         #if len(lines) != len(comments) + len(settings) + len(commands): raise ValueError('Invalid file format for tasks log')
 
         # Check Settings
-        changed_settings = self.settings.viewkeys() - settings.viewkeys() # new settings
-        changed_settings.update(k for k in (self.settings.viewkeys() & settings.viewkeys()) if str(self.settings[k]).strip() != settings[k]) # all previous settings that changed value
+        changed_settings = self.settings.keys() - settings.keys() # new settings
+        changed_settings.update(k for k in (self.settings.keys() & settings.keys()) if str(self.settings[k]).strip() != settings[k]) # all previous settings that changed value
 
         # Check Tasks / Files
-        changed = self.all_tasks.viewkeys() - tasks.viewkeys() # new tasks are not done
-        for n,dt in tasks.items(): # not iteritems() since we may remove elements
+        changed = self.all_tasks.keys() - tasks.keys() # new tasks are not done
+        for n,dt in list(tasks.items()): # not iteritems() since we may remove elements
             t = self.find(n)
             if not t: del tasks[n] # task no longer exists
             elif not t.settings.isdisjoint(changed_settings): changed.add(n) # settings changed
@@ -861,6 +861,6 @@ class Tasks:
         for n in changed.copy(): changed.update(str(t) for t in self.find(n).all_after()) # add every task that comes after a changed task
 
         # Mark as Done
-        done_tasks = tasks.viewkeys() - changed
+        done_tasks = tasks.keys() - changed
         for n in done_tasks: self.find(n).done = True
         return sorted((tasks[n] + " " + n) for n in done_tasks)

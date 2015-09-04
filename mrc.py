@@ -1,5 +1,5 @@
 from numpy import fromfile
-from images import IM_BYTE, IM_SBYTE, IM_SHORT, IM_SHORT_BE, IM_USHORT, IM_USHORT_BE, IM_FLOAT, IM_RGB24, IM_RGB24_STRUCT
+from .images import IM_BYTE, IM_SBYTE, IM_SHORT, IM_SHORT_BE, IM_USHORT, IM_USHORT_BE, IM_FLOAT, IM_RGB24, IM_RGB24_STRUCT
 
 __all__ = ['MRC']
 
@@ -87,7 +87,7 @@ class MRC:
             from sys import byteorder # get the native byte order as 'little' or 'big'
             return '<' if byteorder == 'little' else '>'
         return endian
-    
+
     def __init__(self, filename, readonly=False, nx=None, ny=None, dtype=None):
         """
         Either opens a previous MRC file or creates a new MRC file.
@@ -96,23 +96,32 @@ class MRC:
         When creating an MRC file you must specify the width, height, and data type (one of the IM_xxx values).
         """
         from struct import unpack
-        
+
         if nx or ny or dtype:
             ### Creating a new file ###
 
             # Validate
-            if readonly: raise ValueError('readonly')
+            if readonly:
+                raise ValueError('readonly')
+
             self.__dict__['readonly'] = False
-            if nx <= 0 or ny <= 0: raise ValueError('nx/ny')
+
+            if nx <= 0 or ny <= 0:
+                raise ValueError('nx/ny')
 
             # Get the mode
             endian = MRC.__get_endian(dtype)
             next = 0
-            if dtype == IM_RGB24 or dtype == IM_RGB24_STRUCT: mode = MRC.BYTE_3; dtype = IM_RGB24
-            elif dtype == IM_BYTE   or dtype == IM_SBYTE:     mode = MRC.BYTE
-            elif dtype == IM_SHORT  or dtype == IM_SHORT_BE:  mode = MRC.SHORT
-            elif dtype == IM_USHORT or dtype == IM_USHORT_BE: mode = MRC.USHORT
-            elif dtype == IM_FLOAT: mode = MRC.FLOAT
+            if dtype == IM_RGB24 or dtype == IM_RGB24_STRUCT:
+                mode = MRC.BYTE_3; dtype = IM_RGB24
+            elif dtype == IM_BYTE or dtype == IM_SBYTE:
+                mode = MRC.BYTE
+            elif dtype == IM_SHORT or dtype == IM_SHORT_BE:
+                mode = MRC.SHORT
+            elif dtype == IM_USHORT or dtype == IM_USHORT_BE:
+                mode = MRC.USHORT
+            elif dtype == IM_FLOAT:
+                mode = MRC.FLOAT
             else: raise ValueError('dtype')
 
             # Open file (truncates if existing)
@@ -159,21 +168,38 @@ class MRC:
                 elif en != MRC.LITTLE_ENDIAN and (en_1 != (MRC.LITTLE_ENDIAN & 0xFF) or en_432 != 0):
                     f.close()
                     raise IOError('MRC file is invalid (stamp is 0x%08x)' % en)
-                h = dict(zip(MRC.FIELDS, unpack(endian + '10i6f3i3fiih30xhh20xii6h6f3f2ifi', raw)))
+                h = dict(list(zip(MRC.FIELDS, unpack(endian + '10i6f3i3fiih30xhh20xii6h6f3f2ifi', raw))))
             else:
-                h = dict(zip(MRC.FIELDS_OLD, unpack('<10i6f3i3fiih30xhh20xii6h6f6h3fi', raw)))
+                h = dict(list(zip(MRC.FIELDS_OLD, unpack('<10i6f3i3fiih30xhh20xii6h6f6h3fi', raw))))
             self.__dict__['header'] = h
 
             nx, ny, nz = h['nx'], h['ny'], h['nz']
             mode = h['mode']
             next, nlabl = h['next'], h['nlabl']
 
-            if nx <= 0 or ny <= 0 or nz <= 0:        f.close(); raise IOError('MRC file is invalid (dims are %dx%dx%d)' % (h['nx'], h['ny'], h['nz']))
-            if next < 0:                             f.close(); raise IOError('MRC file is invalid (extended header size is %d)' % h['next'])
-            if not (0 <= nlabl <= MRC.LABEL_COUNT):  f.close(); raise IOError('MRC file is invalid (the number of labels is %d)' % h['nlabl'])
-            if h['nxstart'] !=  0 or h['nystart'] !=  0 or h['nzstart'] !=  0: f.close(); raise IOError('MRC file is has an unusual start (%d, %d, %d)'       % (h['nxstart'], h['nystart'], h['nzstart']))
-            if h['alpha']   != 90 or h['beta']    != 90 or h['gamma']   != 90: f.close(); raise IOError('MRC file is has an unusual cell angles (%d, %d, %d)' % (h['alpha'], h['beta'], h['gamma']))
-            if h['mapc']    !=  1 or h['mapr']    !=  2 or h['maps']    !=  3: f.close(); raise IOError('MRC file is has an unusual ordering (%d, %d, %d)'    % (h['mapc'], h['mapr'], h['maps']))
+            if nx <= 0 or ny <= 0 or nz <= 0:
+                f.close()
+                raise IOError('MRC file is invalid (dims are %dx%dx%d)' % (h['nx'], h['ny'], h['nz']))
+
+            if next < 0:
+                f.close()
+                raise IOError('MRC file is invalid (extended header size is %d)' % h['next'])
+
+            if not (0 <= nlabl <= MRC.LABEL_COUNT):
+                f.close()
+                raise IOError('MRC file is invalid (the number of labels is %d)' % h['nlabl'])
+
+            if h['nxstart'] !=  0 or h['nystart'] !=  0 or h['nzstart'] !=  0:
+                f.close()
+                raise IOError('MRC file is has an unusual start (%d, %d, %d)'       % (h['nxstart'], h['nystart'], h['nzstart']))
+
+            if h['alpha']   != 90 or h['beta']    != 90 or h['gamma']   != 90:
+                f.close()
+                raise IOError('MRC file is has an unusual cell angles (%d, %d, %d)' % (h['alpha'], h['beta'], h['gamma']))
+
+            if h['mapc'] != 1 or h['mapr'] != 2 or h['maps'] !=  3:
+                f.close()
+                raise IOError('MRC file is has an unusual ordering (%d, %d, %d)'    % (h['mapc'], h['mapr'], h['maps']))
 
             # TODO: validate mx, my, mz - grid size in X, Y, and Z (are these always equal to nx, ny, nz?)
 
@@ -216,12 +242,12 @@ class MRC:
 
     # Forwarding attributes to the header names
     def __getattr__(self, name):
-        if name == 'header' or not self.header.has_key(name): raise AttributeError(name)
+        if name == 'header' or name not in self.header: raise AttributeError(name)
         return self.header[name]
     def __setattr__(self, name, value):
-        if name == 'header' or not self.header.has_key(name) or not name in MRC.MODIFIABLE_FIELDS: raise AttributeError(name)
+        if name == 'header' or name not in self.header or not name in MRC.MODIFIABLE_FIELDS: raise AttributeError(name)
         self.header[name] = value
-    def __dir__(self): return sorted(set(dir(self.__class__) + self.__dict__.keys() + self.header.keys()))
+    def __dir__(self): return sorted(set(dir(self.__class__) + list(self.__dict__.keys()) + list(self.header.keys())))
     @property
     def pixel_spacing(self):
         """Gets the pixel spacing of the data"""
@@ -256,7 +282,7 @@ class MRC:
     # Getting Slices
     def __getitem__(self, index):
         nz = self.header['nz']
-        if isinstance(index, (int, long)):
+        if isinstance(index, int):
             if index < 0: index = nz - index
             if index >= nz: raise KeyError('index')
             return self._get_section(index)
@@ -273,7 +299,7 @@ class MRC:
                 for _ in range(index.start + 1, index.stop): l.append(self._get_next_section())
                 return l
             else:
-                r = range(index.start, index.stop, index.step)
+                r = list(range(index.start, index.stop, index.step))
                 if len(r) == 0: return []
                 if index.step > 0 and r[-1] >= nz or index.step < 0 and r[-1] < 0: raise KeyError('index')
                 l = []
@@ -318,12 +344,21 @@ class MRC:
     def write_header(self):
         """Write the header to disk."""
         # Validate and update some header fields
-        if self.readonly: raise Exception('readonly')
+        if self.readonly:
+            raise Exception('readonly')
+
         h = self.header
-        if h['nx'] <= 0 or h['ny'] <= 0 or h['nz'] <= 0: raise ValueError('nx/ny/nz')
-        if len(h['labels']) > MRC.LABEL_COUNT: raise ValueError('labels')
+
+        if h['nx'] <= 0 or h['ny'] <= 0 or h['nz'] <= 0:
+            raise ValueError('nx/ny/nz')
+
+        if len(h['labels']) > MRC.LABEL_COUNT:
+            raise ValueError('labels')
+
         for lbl in h['labels']:
-            if len(lbl) > MRC.LABEL_LEN: raise ValueError('label')
+            if len(lbl) > MRC.LABEL_LEN:
+                raise ValueError('label')
+
         h['nlabl'] = len(h['labels'])
         h['next'] = len(h['extra']) if 'extra' in h and h['extra'] else 0
 
@@ -334,24 +369,35 @@ class MRC:
             self.__write_header(MRC.FIELDS, endian + '10i6f3i3fiih30xhh20xii6h6f3f2ifi')
         else:
             self.__write_header(MRC.FIELDS_OLD, '<10i6f3i3fiih30xhh20xii6h6f6h3fi')
+
     def __write_header(self, fields, format):
         # Actually write the header (checks must be already done)
         from struct import pack
+
         h = self.header
+
         f = self.file
+
         f.seek(0)
         values = [h[field] for field in fields]
         f.write(pack(format, *values))
-        for lbl in h['labels']: f.write(lbl.ljust(MRC.LABEL_LEN))
-        blank_lbl = ' ' * MRC.LABEL_LEN
-        for _ in xrange(len(h['labels']), MRC.LABEL_COUNT): f.write(blank_lbl)
-        if h['next']: f.write(h['extra'])
 
-    # Setting and adding slices        
+        for lbl in h['labels']:
+            f.write(bytes(lbl.ljust(MRC.LABEL_LEN)))
+
+        blank_lbl = ' ' * MRC.LABEL_LEN
+
+        for _ in range(len(h['labels']), MRC.LABEL_COUNT):
+            f.write(bytes(blank_lbl,'UTF-8'))
+
+        if h['next']:
+            f.write(h['extra'])
+
+    # Setting and adding slices
     def __setitem__(self, index, im):
         """Sets a slice to a new image, writing it to disk. The header values 'amin', 'amax', and 'amean' are not updated since they cannot be accurately updated without reading the replaced slice/all slices."""
         if self.readonly: raise Exception('readonly')
-        if not isinstance(index, (int, long)): raise TypeError('index')
+        if not isinstance(index, int): raise TypeError('index')
         h = self.header
         nz = h['nz']
         if index < 0: index = nz - index
@@ -379,7 +425,7 @@ class MRC:
         """Appends many slices, writing them to disk. The header values 'amin', 'amax, 'amean', 'nz', 'mz', and 'zlen' are updated but not written to disk."""
         if self.readonly: raise Exception('readonly')
         ims = iter(ims) # get as an iterator [no-op for something that is already an iterator]
-        try: im = ims.next() # first image in iterator
+        try: im = next(ims) # first image in iterator
         except StopIteration: return # there are no images to add
         h = self.header
         nz = h['nz']
@@ -436,7 +482,7 @@ class MRCView(MRC):
         if len(x) != 2 or x[0] < 0 or x[1] < x[0] or x[1] >= mrc_h['nx']: raise ValueError('x')
         if len(y) != 2 or y[0] < 0 or y[1] < y[0] or y[1] >= mrc_h['ny']: raise ValueError('y')
         if len(z) != 2 or z[0] < 0 or z[1] < z[0] or z[1] >= mrc_h['nz']: raise ValueError('z')
-        
+
         x_off, nx = x[0], x[1]-x[0]+1
         y_off, ny = y[0], y[1]-y[0]+1
         z_off, nz = z[0], z[1]-z[0]+1
@@ -452,7 +498,7 @@ class MRCView(MRC):
         h['xorg'] = mrc_h['xorg'] - sx * x_off; h['yorg'] = mrc_h['yorg'] - sy * y_off; h['zorg'] = mrc_h['zorg'] - sz * z_off
         # TODO: add a label? self.add_label('...')
         self.__dict__['header'] = h
-        
+
         dtype = mrc.dtype
         stride = mrc.stride
         sec_full_data_sz = mrc.section_full_data_size
@@ -465,7 +511,7 @@ class MRCView(MRC):
         self.__dict__['section_size'] = ny * stride
         self.__dict__['section_gap'] = sec_full_data_sz - ny * stride * dtype.itemsize
         self.__dict__['section_full_data_size'] = sec_full_data_sz
-        
+
     def close(self): pass # closing a view is a no-op
     def _get_section(self, i):
         # TODO: this currently wastes memory by reading the entire horizontal axis of the full image then just skipping it in the view (it is still there though and it must all be read)
