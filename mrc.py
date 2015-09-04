@@ -383,6 +383,7 @@ class MRC:
         f.write(pack(format, *values))
 
         for lbl in h['labels']:
+            print(lbl.ljust(MRC.LABEL_LEN))
             f.write(bytes(lbl.ljust(MRC.LABEL_LEN)))
 
         blank_lbl = ' ' * MRC.LABEL_LEN
